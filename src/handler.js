@@ -1,33 +1,33 @@
 const { nanoid } = require('nanoid');
-const { getBooks, saveDataBookToFile, updateDataBookToFile, deleteDataBookToFile } = require('./books');
+const books = require('./books');
 const { addBookValidator, updateBookValidator } = require('./validator');
 
 const getAllBooksHandler = (request, h) => {
   const { name, reading, finished } = request.query;
-  let books = getBooks();
+  let query = books;
 
   if (reading) {
-    books = books.filter((book) => {
+    query = query.filter((book) => {
       const isReading = reading == 1 ? true : false;
       return book.reading === isReading;
     });
   }
 
   if (finished) {
-    books = books.filter((book) => {
+    query = query.filter((book) => {
       const isFinished = finished == 1 ? true : false;
       return book.finished === isFinished;
     });
   }
 
   if (name) {
-    books = books.filter((book) => String(book.name).toLowerCase().includes(name.toLowerCase()));
+    query = query.filter((book) => String(book.name).toLowerCase().includes(name.toLowerCase()));
   }
 
   const response = h.response({
     status: 'success',
     data: {
-      books: books.map((book) => ({ id: book.id, name: book.name, publisher: book.publisher })),
+      books: query.map((book) => ({ id: book.id, name: book.name, publisher: book.publisher })),
     },
   });
 
@@ -38,7 +38,6 @@ const getAllBooksHandler = (request, h) => {
 const getBookByIdHandler = (request, h) => {
   const { id } = request.params;
 
-  const books = getBooks();
   const book = books.find((book) => book.id === id);
 
   if (book) {
@@ -97,9 +96,8 @@ const addBookHandler = (request, h) => {
     updatedAt
   };
 
-  saveDataBookToFile(newBook);
+  books.push(newBook);
 
-  const books = getBooks();
   const isSuccess = books.filter((book) => book.id === id).length > 0;
 
   if (isSuccess) {
@@ -130,7 +128,6 @@ const editBookByIdHandler = (request, h) => {
   const { name, year, author, summary, publisher, pageCount, readPage, reading } = request.payload;
   const finished = (pageCount === readPage);
   const updatedAt = new Date().toISOString();
-  const books = getBooks();
   const index = books.findIndex((book) => book.id === id);
 
   if (index === -1) {
@@ -157,8 +154,8 @@ const editBookByIdHandler = (request, h) => {
     return response;
   }
 
-  const book = {
-    id,
+  books[index] = {
+    ...books[index],
     name,
     year,
     author,
@@ -171,8 +168,6 @@ const editBookByIdHandler = (request, h) => {
     updatedAt
   };
 
-  updateDataBookToFile(index, book);
-
   const response = h.response({
     status: 'success',
     message: 'Buku berhasil diperbarui',
@@ -183,11 +178,10 @@ const editBookByIdHandler = (request, h) => {
 
 const deleteBookByIdHandler = (request, h) => {
   const { id } = request.params;
-  const books = getBooks();
   const index = books.findIndex((book) => book.id === id);
 
   if (index !== -1) {
-    deleteDataBookToFile(index);
+    books.splice(index, 1);
     const response = h.response({
       status: 'success',
       message: 'Buku berhasil dihapus',
